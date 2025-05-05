@@ -1,3 +1,14 @@
 fun foo(x, y) {
     x + y;
 }
+foo(5, 5);
+
+fun bar(x, y) {
+    x * y;
+}
+bar(2.5, 2);
+
+fun foobar(x) {
+    x * x;
+}
+foobar(5);

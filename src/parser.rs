@@ -1,14 +1,5 @@
 use crate::lexer::TokenType;
-
-#[derive(Debug)]
-pub enum ASTNode {
-    Number(f64),
-    Identifier(String),
-    BinaryOp(Box<ASTNode>, char, Box<ASTNode>),
-    Call(String, Vec<ASTNode>),
-    Function(String, Vec<String>, Vec<ASTNode>),
-    Program(Vec<ASTNode>),
-}
+use crate::astnode::ASTNode;
 
 pub struct Parser {
     tokens: Vec<TokenType>,
@@ -32,11 +23,15 @@ impl Parser {
     }
     
     pub fn parse(&mut self) -> ASTNode {
-        let mut functions = vec![];
+        let mut nodes = vec![];
         while self.pos < self.tokens.len() && *self.current_token() != TokenType::EOF {
-            functions.push(self.parse_function());
+            if *self.current_token() == TokenType::FUN {
+                nodes.push(self.parse_function());
+            } else {
+                nodes.push(self.parse_statement());
+            }
         }
-        ASTNode::Program(functions)
+        ASTNode::Program(nodes)
     }
     
     fn parse_function(&mut self) -> ASTNode {
