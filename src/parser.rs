@@ -3,7 +3,11 @@ use crate::lexer::TokenType;
 #[derive(Debug)]
 pub enum ASTNode {
     Number(f64),
+    Identifier(String),
     BinaryOp(Box<ASTNode>, char, Box<ASTNode>),
+    Call(String, Vec<ASTNode>),
+    Function(String, Vec<String>, Vec<ASTNode>),
+    Program(Vec<ASTNode>),
 }
 
 pub struct Parser {
@@ -19,25 +23,97 @@ impl Parser {
         }
     }
     
+    fn current_token(&self) -> &TokenType {
+        &self.tokens[self.pos]
+    }
+    
+    fn advance(&mut self) {
+        self.pos += 1;
+    }
+    
     pub fn parse(&mut self) -> ASTNode {
-        let node = self.parse_expression();
-        if self.pos < self.tokens.len() && self.tokens[self.pos] != TokenType::EOF {
-            panic!("unexpected tokens");
+        let mut functions = vec![];
+        while self.pos < self.tokens.len() && *self.current_token() != TokenType::EOF {
+            functions.push(self.parse_function());
         }
-        node
+        ASTNode::Program(functions)
+    }
+    
+    fn parse_function(&mut self) -> ASTNode {
+        if *self.current_token() == TokenType::FUN {
+            self.advance();
+        } else {
+            panic!("expected 'fun'");
+        }
+        
+        let name = match self.current_token() {
+            TokenType::IDENTIFIER(s) => s.clone(),
+            _ => panic!("expected function name")
+        };
+        
+        self.advance();
+        if *self.current_token() != TokenType::LPAREN {
+            panic!("expected '('");
+        }
+        
+        self.advance();
+        let mut params = vec![];
+        if *self.current_token() != TokenType::RPAREN {
+            match self.current_token() {
+                TokenType::IDENTIFIER(s) => params.push(s.clone()),
+                _ => panic!("expected parameter")
+            }
+            self.advance();
+            while *self.current_token() == TokenType::COMMA {
+                self.advance();
+                match self.current_token() {
+                    TokenType::IDENTIFIER(s) => params.push(s.clone()),
+                    _ => panic!("expected parameter")
+                }
+                self.advance();
+            }
+        }
+        if *self.current_token() != TokenType::RPAREN {
+            panic!("expected ')'");
+        }
+        
+        self.advance();
+        if *self.current_token() != TokenType::LBRACE {
+            panic!("expected '{{'");
+        }
+        
+        self.advance();
+        
+        let mut body = vec![];
+        while *self.current_token() != TokenType::RBRACE {
+            body.push(self.parse_statement());
+        }
+        self.advance();
+        
+        ASTNode::Function(name, params, body)
+    }
+    
+    fn parse_statement(&mut self) -> ASTNode {
+        let expr = self.parse_expression();
+        if *self.current_token() == TokenType::SEMICOLON {
+            self.advance();
+        } else {
+            panic!("expected ';'");
+        }
+        expr
     }
     
     fn parse_expression(&mut self) -> ASTNode {
         let mut node = self.parse_term();
         while self.pos < self.tokens.len() {
-            match self.tokens[self.pos] {
+            match self.current_token() {
                 TokenType::PLUS => {
-                    self.pos += 1;
+                    self.advance();
                     let right = self.parse_term();
                     node = ASTNode::BinaryOp(Box::new(node), '+', Box::new(right));
                 }
                 TokenType::MINUS => {
-                    self.pos += 1;
+                    self.advance();
                     let right = self.parse_term();
                     node = ASTNode::BinaryOp(Box::new(node), '-', Box::new(right));
                 }
@@ -51,15 +127,15 @@ impl Parser {
     fn parse_term(&mut self) -> ASTNode {
         let mut node = self.parse_factor();
         while self.pos < self.tokens.len() {
-            match self.tokens[self.pos] {
+            match self.current_token() {
                 TokenType::STAR => {
-                    self.pos += 1;
-                    let right = self.parse_term();
+                    self.advance();
+                    let right = self.parse_factor();
                     node = ASTNode::BinaryOp(Box::new(node), '*', Box::new(right));
                 }
                 TokenType::SLASH => {
-                    self.pos += 1;
-                    let right = self.parse_term();
+                    self.advance();
+                    let right = self.parse_factor();
                     node = ASTNode::BinaryOp(Box::new(node), '/', Box::new(right));
                 }
                 _ => break,
@@ -70,13 +146,45 @@ impl Parser {
     }    
     
     fn parse_factor(&mut self) -> ASTNode {
-        let token = &self.tokens[self.pos];
-        match token {
+        match self.current_token() {
             TokenType::NUMBER(n) => {
-                self.pos += 1;
-                ASTNode::Number(*n)
+                let node = ASTNode::Number(*n);
+                self.advance();
+                node
             }
-            _ => panic!("expected number but got: {:?}", token),
+            TokenType::IDENTIFIER(s) => {
+                let name = s.clone();
+                self.advance();
+                if *self.current_token() == TokenType::LPAREN {
+                    self.advance();
+                    let mut args = vec![];
+                    if *self.current_token() != TokenType::RPAREN {
+                        args.push(self.parse_expression());
+                        while *self.current_token() == TokenType::COMMA {
+                            self.advance();
+                            args.push(self.parse_expression());
+                        }
+                    }
+                    if *self.current_token() != TokenType::RPAREN {
+                        panic!("expected ')'");
+                    }
+                    self.advance();
+                    ASTNode::Call(name, args)
+                } else {
+                    ASTNode::Identifier(name)
+                }
+            }
+            TokenType::LPAREN => {
+                self.advance();
+                let node = self.parse_expression();
+                if *self.current_token() == TokenType::RPAREN {
+                    self.advance();
+                    node
+                } else {
+                    panic!("expected ')'");
+                }
+            }
+            _ => panic!("expected number, identifier or '('"),
         }
     }
 }

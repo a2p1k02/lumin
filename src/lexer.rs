@@ -7,6 +7,14 @@ pub enum TokenType {
     MINUS,
     STAR,
     SLASH,
+    FUN,
+    IDENTIFIER(String),
+    LPAREN,
+    RPAREN,
+    LBRACE,
+    RBRACE,
+    COMMA,
+    SEMICOLON
 }
 
 pub struct Lexer {
@@ -35,6 +43,26 @@ impl Lexer {
             '-' => TokenType::MINUS,
             '*' => TokenType::STAR,
             '/' => TokenType::SLASH,
+            '(' => TokenType::LPAREN,
+            ')' => TokenType::RPAREN,
+            '{' => TokenType::LBRACE,
+            '}' => TokenType::RBRACE,
+            ',' => TokenType::COMMA,
+            ';' => TokenType::SEMICOLON,
+            'a'..='z' | 'A'..='Z' | '_' => {
+                let mut token = String::new();
+                token.push(ch);
+                while self.pos < self.input.len() && (self.input[self.pos].is_alphanumeric() || self.input[self.pos] == '_') {
+                    token.push(self.input[self.pos]);
+                    self.pos += 1;
+                }
+                
+                if token == "fun" {
+                    TokenType::FUN
+                } else {
+                    TokenType::IDENTIFIER(token)
+                }
+            }
             '0'..='9' => {
                 let mut num_str = String::new();
                 num_str.push(ch);
