@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenType {
     EOF,
     EQUAL,
@@ -38,7 +38,7 @@ impl Lexer {
             '0'..='9' => {
                 let mut num_str = String::new();
                 num_str.push(ch);
-                
+
                 while self.pos < self.input.len() && (self.input[self.pos].is_digit(10) || self.input[self.pos] == '.') {
                     num_str.push(self.input[self.pos]);
                     self.pos += 1;
