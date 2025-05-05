@@ -1,9 +1,12 @@
 ﻿# LUMIN
 
-This is a simple programming language.
-So, my wife wants to start learning programming.
-And I decided to create a programming language for her.
-Therefore, this project can be modified if my wife wants to change the programming language :)
+<div align="center">
+    This is a simple programming language. <br>
+So, my wife wants to start learning programming. <br>
+And I decided to create a programming language for her. <br>
+Therefore, this project can be modified if my wife wants to change the programming language :) <br>
+</div>
+
 
 ## Example
 ```kotlin
